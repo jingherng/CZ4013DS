@@ -70,7 +70,7 @@ class Server:
         if len(d) == 4:
             service = d[0]
             filePathName = d[1]
-            offset = d[2]
+            offset = int(d[2])
             numBytes = d[3]
         else:
             service = d[0]
@@ -90,18 +90,38 @@ class Server:
     def readFile(self, filePathName, offset, numBytes):
         try:
             f = open(filePathName, 'r')
-            f.seek(int(offset), 0)
+            f.seek(offset, 0)
             content = f.read(int(numBytes))
             f.close()
             if content:
                 return content
             else:
                 return "Offset exceeds file length"
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             return "File does not exist on server"
+        except OSError as e:
+            return str(e)
 
     def insertContent(self, filePathName, offset, numBytes):
-        return
+        try:
+            f = open(filePathName, 'r')
+            content = f.read()
+            f.close()
+
+            if offset > len(content):
+                return "Offset exceeds file length"
+
+            f = open(filePathName, 'w')
+            content = content[0:offset] + numBytes + content[offset:]
+            f.write(content)
+            f.close()
+
+            return content
+
+        except FileNotFoundError:
+            return "File does not exist on server"
+        except OSError as e:
+            return str(e)
 
     def monitorFile(self, filePathName, monitorInterval):
         return

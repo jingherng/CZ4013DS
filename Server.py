@@ -93,9 +93,12 @@ class Server:
             f.seek(int(offset), 0)
             content = f.read(int(numBytes))
             f.close()
-            return content
+            if content:
+                return content
+            else:
+                return "Offset exceeds file length"
         except FileNotFoundError as e:
-            return str(e)
+            return "File does not exist on server"
 
     def insertContent(self, filePathName, offset, numBytes):
         return

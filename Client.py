@@ -38,7 +38,8 @@ class Client:
                 if data == 'q':
                     self.close()
                     break
-                print('Server reply:\n{}'.format(data))
+                #print('Server reply:\n{}'.format(data))
+                print('{}'.format(data))
 
             except socket.error as e:
                 print('Error receiving message:\n{}'.format(e))

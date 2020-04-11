@@ -4,16 +4,13 @@ from Config import *
 import sys
 
 def Main():
-    print("Starting client and server...")
-    server = Server()
+    print("Starting client...")
     client = Client()
     try:
-        server.run()
-        print("Server started...")
         client.run()
         print("Client started...")
     except Exception as e:
-        print("Error starting client and server: {}".format(e))
+        print("Error starting client: {}".format(e))
 
 
 if __name__ == "__main__":

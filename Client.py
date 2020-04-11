@@ -34,3 +34,7 @@ class Client:
 
             except socket.error as e:
                 logging.error('Error receiving message: {}'.format(e))
+
+if __name__ == "__main__":
+    client = Client()
+    client.run()

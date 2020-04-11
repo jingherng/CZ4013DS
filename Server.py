@@ -61,3 +61,7 @@ class Server:
         except socket.error as e:
             logging.error('Error closing socket: {}'.format(e))
         logging.info('Socket closed...')
+
+if __name__ == "__main__":
+    server = Server()
+    server.run()

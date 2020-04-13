@@ -1,3 +1,4 @@
+from Marshal import *
 import socket, time, sys
 
 class Server:
@@ -36,8 +37,7 @@ class Server:
         while True:
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
-            data = data.decode('utf-8')
-            print('Received data from {}:\n{}'.format(address, data))
+            print('Received data from {}:\n{!r}'.format(address, data))
             if data == 'q':
                 self.sock.sendto( bytes('q', 'utf-8'), address)
                 self.close()
@@ -48,9 +48,8 @@ class Server:
 
         ## processing of data
         reply = self.processReq(data)
-        ## reply variable encoded in bytes utf-8
-        reply = bytes(reply, 'utf-8')
-        self.sock.sendto(reply, address)
+        print('Reply: {}'.format(reply))
+        self.sock.sendto(pack(reply), address)
         return
 
     def close(self):
@@ -65,26 +64,19 @@ class Server:
         if not data:
             return 'Request not found.'
 
-        d = data.split()
-        
-        if len(d) == 4:
-            service = d[0]
-            filePathName = d[1]
-            offset = int(d[2])
-            numBytes = d[3]
-        else:
-            service = d[0]
-            filePathName = d[1]
-            monitorInterval = d[2]
+        d = unpack(data)
+        #print("D IS HERE: {}".format(d))
 
-        if service == '1': # Read content of file
-            return self.readFile(filePathName, offset, numBytes)
+        service = d[0]
+
+        if service == 1: # Read content of file
+            return self.readFile(d[2], d[3], d[4])
         
-        elif service == '2': # Insert content into file
-            return self.insertContent(filePathName, offset, numBytes)
+        elif service == 2: # Insert content into file
+            return self.insertContent(d[2], d[3], d[4])
         
-        elif service == '3': # Monitor updates made to content of specified file
-            return self.monitorFile(filePathName, monitorInterval)
+        elif service == 3: # Monitor updates made to content of specified file
+            return self.monitorFile(d[2], d[3])
 
     
     def readFile(self, filePathName, offset, numBytes):
@@ -94,13 +86,13 @@ class Server:
             content = f.read(int(numBytes))
             f.close()
             if content:
-                return content
+                return [1, 1, STR, content]
             else:
-                return "Offset exceeds file length"
+                return [1, 1, STR, "Offset exceeds file length"]
         except FileNotFoundError:
-            return "File does not exist on server"
+            return [1, 1, STR, "File does not exist on server"]
         except OSError as e:
-            return str(e)
+            return [1, 1, STR, str(e)]
 
     def insertContent(self, filePathName, offset, numBytes):
         try:
@@ -109,19 +101,19 @@ class Server:
             f.close()
 
             if offset > len(content):
-                return "Offset exceeds file length"
+                return [1, 1, STR, "Offset exceeds file length"]
 
             f = open(filePathName, 'w')
             content = content[0:offset] + numBytes + content[offset:]
             f.write(content)
             f.close()
 
-            return content
+            return [1, 1, STR, content]
 
         except FileNotFoundError:
-            return "File does not exist on server"
+            return [1, 1, STR, "File does not exist on server"]
         except OSError as e:
-            return str(e)
+            return [1, 1, STR, str(e)]
 
     def monitorFile(self, filePathName, monitorInterval):
         return

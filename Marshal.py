@@ -22,6 +22,8 @@ def pack(msg):
             packed.extend(packInt(msg[numObj+i]))
         elif msg[i] == STR:
             packed.extend(packString(msg[numObj+i]))
+        elif msg[i] == FLT:
+            packed.extend(packFloat(msg[numObj+i]))
     return bytes(packed)
 
 def unpack(msg):
@@ -37,7 +39,9 @@ def unpack(msg):
             unpacked.append(unpackInt(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
         elif msg[currentIndex] == STR:
             unpacked.append(unpackString(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
-
+        elif msg[currentIndex] == FLT:
+            unpacked.append(unpackFloat(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
+            
         currentIndex += lenOfCurrentObj
     return unpacked
 
@@ -69,3 +73,9 @@ def unpackString(obj):
     for i in range(1, obj[0]):
         str += chr(obj[i])
     return str
+
+def packFloat(obj):
+    return packString(str(obj))
+
+def unpackFloat(obj):
+    return float(unpackString(obj))

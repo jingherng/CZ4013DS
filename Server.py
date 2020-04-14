@@ -5,9 +5,8 @@ class Server:
     def __init__(self):
         self.UDP_ip = "127.0.0.1"
         self.UDP_port = 7777
-        self.cache = [] # list for last limit requests & responess for at-most-once invocation semantics
-        self.monitor = [] # list for monitoring
-        self.time = time.process_time()
+        self.time = time.time()
+        self.clientList = []
 
     def run(self):
         try:
@@ -35,19 +34,18 @@ class Server:
     # await data from client
     def await(self):
         while True:
+            print('Client List: {}'.format(self.clientList))
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
             print('Received data from {}:\n{!r}'.format(address, data))
-            if data == 'q':
-                self.sock.sendto( bytes('q', 'utf-8'), address)
-                self.close()
-                return
+            if address not in self.clientList:
+                self.clientList.append(address)
             self.replyReq(data, address)
 
     def replyReq(self, data, address):
 
         ## processing of data
-        reply = self.processReq(data)
+        reply = self.processReq(data, address)
         print('Reply: {}'.format(reply))
         self.sock.sendto(pack(reply), address)
         return
@@ -60,7 +58,7 @@ class Server:
             print('Error closing socket:\n{}'.format(e))
         print('Socket closed...')
 
-    def processReq(self, data):
+    def processReq(self, data, address):
         if not data:
             return 'Request not found.'
 
@@ -73,10 +71,18 @@ class Server:
             return self.readFile(d[2], d[3], d[4])
         
         elif service == 2: # Insert content into file
-            return self.insertContent(d[2], d[3], d[4])
+            self.time = time.time()
+            content = self.insertContent(d[2], d[3], d[4])
+            return content
         
         elif service == 3: # Monitor updates made to content of specified file
-            return self.monitorFile(d[2], d[3])
+            return self.monitorFile(address, d[2], d[3], self.sock)
+
+        elif service == 0:
+            return self.sendTserver()
+
+    def sendTserver(self):
+        return [0, 1, FLT, self.time]
 
     
     def readFile(self, filePathName, offset, numBytes):
@@ -101,21 +107,21 @@ class Server:
             f.close()
 
             if offset > len(content):
-                return [1, 1, STR, "Offset exceeds file length"]
+                return [2, 1, STR, "Offset exceeds file length"]
 
             f = open(filePathName, 'w')
             content = content[0:offset] + numBytes + content[offset:]
             f.write(content)
             f.close()
 
-            return [1, 1, STR, content]
+            return [2, 2, FLT, STR, self.time, content]
 
         except FileNotFoundError:
-            return [1, 1, STR, "File does not exist on server"]
+            return [2, 1, STR, "File does not exist on server"]
         except OSError as e:
-            return [1, 1, STR, str(e)]
+            return [2, 1, STR, str(e)]
 
-    def monitorFile(self, filePathName, monitorInterval):
+    def monitorFile(self, filePathName, monitorInterval, address, sock):
         return
 
 

@@ -1,6 +1,6 @@
 AT_LEAST_ONCE = 100
 AT_MOST_ONCE = 101
-
+ERR = 10
 INT = 11
 STR = 12
 FLT = 13 # Float

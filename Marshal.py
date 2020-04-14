@@ -41,7 +41,8 @@ def unpack(msg):
             unpacked.append(unpackString(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
         elif msg[currentIndex] == FLT:
             unpacked.append(unpackFloat(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
-            
+        elif msg[currentIndex] == ERR:
+            unpacked.append(unpackString(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
         currentIndex += lenOfCurrentObj
     return unpacked
 

@@ -46,8 +46,20 @@ class Client:
                 print('Server Reply: {}'.format(self.queryInsert(filePathname, offset, seq)[-1]))
             elif userChoice == '3':
                 filePathname = input('Input file path name:')
-                monitorInterval = int(input('Input length of monitor interval:'))
+                monitorInterval = int(input('Input length of monitor interval in seconds:'))
                 print('Server Reply: {}'.format(self.queryMonitor(filePathname, monitorInterval)))
+                
+                timeStart = time.time()
+                while time.time() < monitorInterval + timeStart:
+                    try:
+                        self.sock.settimeout(monitorInterval)
+                        data, address = self.sock.recvfrom(4096)
+                        update = unpack(data)[-1]
+                        print('Update made to {}: {}'.format(filePathname, update))
+                        self.cache[-1] = update
+                    except socket.timeout:
+                        print('Monitor interval ended after {} seconds'.format(monitorInterval))
+                        self.queryMonitor(filePathname, monitorInterval)
             elif userChoice == 'q':
                 self.close()
                 break
@@ -80,12 +92,13 @@ class Client:
 
     def queryRead(self, filePathname, offset, numBytes):
         item = self.send([1, 3, STR, INT, INT, filePathname, offset, numBytes])
-        self.cache[-1] = item[-1]
+        if item[1] != ERR: 
+            self.cache[-1] = item[-1]
         return item
 
     def queryInsert(self, filePathname, offset, seq):
         item = self.send([2, 3, STR, INT, STR, filePathname, offset, seq])
-        self.cache[-1] = item[-1]
+        self.cache[-1], self.cache[1] = item[-1], item[-2]
         return item
 
     def queryMonitor(self, filePathname, monitorInterval):
@@ -103,30 +116,14 @@ class Client:
             # issue getattr call to server to obtain Tserver
             Tserver = self.send([0, 1, STR, 'Get Tserver'])[-1]
             self.cache[0] = Tnow
-            print('Tclient: {}'.format(Tclient))
-            print('Tserver: {}'.format(Tserver))
+            # print('Tclient: {}'.format(Tclient))
+            # print('Tserver: {}'.format(Tserver))
             if Tclient == Tserver:
                 print('Cache entry valid. Data not modified at server.')
                 return False
             elif Tclient < Tserver:
                 print('Cache entry invalid. Send req to server')
                 return True
-
-
-    ### TODO: CACHE
-    # Every time a R/W op is done by client, cache = [(Tvalid, Tclient), cacheEntry]
-    # check cache which is a list, checkCache()
-
-    # checkCache(): t = freshness_interval
-    # Tnow = current time
-    # Tvalid = time when cache entry was last validated
-    # Tclient = time when cached file was last modified by server
-    # if checkCache() check for x = Tnow - Tvalid < t, freshness interval
-    # if x True, read data from cache
-    # if x false, issue getattr call to server to obtain Tserver
-    # if Tclient == Tserver, Tc updated to current time, T, and cache entry is valid
-    # if tclient < Tserver, cache entry invalid, send req to server for updated data &
-    # update Tvalid
 
 if __name__ == "__main__":
 

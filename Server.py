@@ -7,6 +7,7 @@ class Server:
         self.UDP_port = 7777
         self.time = time.time()
         self.clientList = []
+        self.monitorList = []
 
     def run(self):
         try:
@@ -34,7 +35,6 @@ class Server:
     # await data from client
     def await(self):
         while True:
-            print('Client List: {}'.format(self.clientList))
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
             print('Received data from {}:\n{!r}'.format(address, data))
@@ -73,10 +73,15 @@ class Server:
         elif service == 2: # Insert content into file
             self.time = time.time()
             content = self.insertContent(d[2], d[3], d[4])
+            if len(self.monitorList) > 0:
+                for i in self.monitorList:
+                    if d[2] == i[1]:
+                        print('Update sent to {}: {}'.format(i[0], content))
+                        self.sock.sendto(pack(content), i[0])
             return content
         
         elif service == 3: # Monitor updates made to content of specified file
-            return self.monitorFile(address, d[2], d[3], self.sock)
+            return self.monitorFile(d[2], d[3], address)
 
         elif service == 0:
             return self.sendTserver()
@@ -94,11 +99,11 @@ class Server:
             if content:
                 return [1, 1, STR, content]
             else:
-                return [1, 1, STR, "Offset exceeds file length"]
+                return [1, 1, ERR, "Offset exceeds file length"]
         except FileNotFoundError:
-            return [1, 1, STR, "File does not exist on server"]
+            return [1, 1, ERR, "File does not exist on server"]
         except OSError as e:
-            return [1, 1, STR, str(e)]
+            return [1, 1, ERR, str(e)]
 
     def insertContent(self, filePathName, offset, numBytes):
         try:
@@ -107,7 +112,7 @@ class Server:
             f.close()
 
             if offset > len(content):
-                return [2, 1, STR, "Offset exceeds file length"]
+                return [2, 1, ERR, "Offset exceeds file length"]
 
             f = open(filePathName, 'w')
             content = content[0:offset] + numBytes + content[offset:]
@@ -117,12 +122,16 @@ class Server:
             return [2, 2, FLT, STR, self.time, content]
 
         except FileNotFoundError:
-            return [2, 1, STR, "File does not exist on server"]
+            return [2, 1, ERR, "File does not exist on server"]
         except OSError as e:
-            return [2, 1, STR, str(e)]
+            return [2, 1, ERR, str(e)]
 
-    def monitorFile(self, filePathName, monitorInterval, address, sock):
-        return
+    def monitorFile(self, filePathName, monitorInterval, address):
+        if (address, filePathName) not in self.monitorList:
+            self.monitorList.append((address, filePathName))
+        else:
+            self.monitorList.remove((address, filePathName))
+        return [3, 1, STR, '{} added to the monitoring list for {} seconds for file: {}'.format(address, monitorInterval, filePathName)]
 
 
 if __name__ == "__main__":

@@ -32,25 +32,35 @@ class Client:
 
             if userChoice == '1':
                 filePathname = input('Input file path name:')
-                offset = int(input('Input offset in bytes:'))
-                numBytes = int(input('Input number of bytes:'))
-                check = self.checkCache()
-                if not check:
-                    print('Retrieved from Cache: {}'.format(self.cache[-1]))
+                findFile = self.findFile(filePathname)
+
+                if findFile == True:
+                    offset = int(input('Input offset in bytes:'))
+                    numBytes = int(input('Input number of bytes:'))
+                    check = self.checkCache()
+                    if not check:
+                        print('Retrieved from Cache: {}'.format(self.cache[-1]))
+                    else:
+                        print('Server Reply: {}'.format(self.queryRead(filePathname, offset, numBytes)[-1]))
                 else:
-                    print('Server Reply: {}'.format(self.queryRead(filePathname, offset, numBytes)[-1]))
+                    print('File does not exist on server')
+
             elif userChoice == '2':
                 filePathname = input('Input file path name:')
-                offset = int(input('Input offset in bytes:'))
-                seq = input('Input sequence of bytes:')
-                print('Server Reply: {}'.format(self.queryInsert(filePathname, offset, seq)[-1]))
+                findFile = self.findFile(filePathname)
+                if findFile:
+                    offset = int(input('Input offset in bytes:'))
+                    seq = input('Input sequence of bytes:')
+                    print('Server Reply: {}'.format(self.queryInsert(filePathname, offset, seq)[-1]))
+                else:
+                    print('File does not exist on server')
+
             elif userChoice == '3':
                 filePathname = input('Input file path name:')
-                monitorInterval = int(input('Input length of monitor interval in seconds:'))
-                print('Server Reply: {}'.format(self.queryMonitor(filePathname, monitorInterval)))
-                
-                timeStart = time.time()
-                while time.time() < monitorInterval + timeStart:
+                findFile = self.findFile(filePathname)
+                if findFile:
+                    monitorInterval = int(input('Input length of monitor interval in seconds:'))
+                    print('Server Reply: {}'.format(self.queryMonitor(filePathname, monitorInterval)))
                     try:
                         self.sock.settimeout(monitorInterval)
                         data, address = self.sock.recvfrom(4096)
@@ -60,6 +70,9 @@ class Client:
                     except socket.timeout:
                         print('Monitor interval ended after {} seconds'.format(monitorInterval))
                         self.queryMonitor(filePathname, monitorInterval)
+                else:
+                    print('File does not exist on server')
+
             elif userChoice == 'q':
                 self.close()
                 break
@@ -74,6 +87,7 @@ class Client:
                 self.sock.sendto(pack(msg), (self.HOST, self.PORT))
                 data, address = self.sock.recvfrom(4096)
                 reply = unpack(data)
+                #print('Reply: {}'.format(reply))
                 if reply[0] == 0:
                     self.cache[1] = reply[-1]
                 return reply
@@ -90,10 +104,20 @@ class Client:
             print('Error closing socket:\n{}'.format(e))
         print('Socket closed...')
 
+    def findFile(self, filePathname):
+        item = self.send([10, 1, STR, filePathname])
+        if item[-1] == 'File exists on server':
+            return True
+        else:
+            return False
+
     def queryRead(self, filePathname, offset, numBytes):
         item = self.send([1, 3, STR, INT, INT, filePathname, offset, numBytes])
-        if item[1] != ERR: 
-            self.cache[-1] = item[-1]
+        errors = ["File does not exist on server", "Offset exceeds file length"]
+        if item[-1] in errors:
+            self.cache[0], self.cache[1] = 0, 0
+        else:
+            self.cache[2] = item[-1]
         return item
 
     def queryInsert(self, filePathname, offset, seq):
@@ -107,17 +131,17 @@ class Client:
 
     def checkCache(self):
         Tvalid, Tclient = self.cache[0], self.cache[1]
+        if self.cache == '':
+            print('Cache entry empty. Send req to server')
+            return True
         Tnow = time.time()
         
         if Tnow - Tvalid < self.freshness_interval:
             print('Does not need access to server, read from cache')
             return False
         elif Tnow - Tvalid >= self.freshness_interval:
-            # issue getattr call to server to obtain Tserver
-            Tserver = self.send([0, 1, STR, 'Get Tserver'])[-1]
+            Tserver = self.send([0, 1, STR, 'Get Tserver'])[-1] # obtain Tserver
             self.cache[0] = Tnow
-            # print('Tclient: {}'.format(Tclient))
-            # print('Tserver: {}'.format(Tserver))
             if Tclient == Tserver:
                 print('Cache entry valid. Data not modified at server.')
                 return False

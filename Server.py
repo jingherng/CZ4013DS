@@ -66,6 +66,8 @@ class Server:
         #print("D IS HERE: {}".format(d))
 
         service = d[0]
+        if service == 10:
+            return self.findFile(d[2])
 
         if service == 1: # Read content of file
             return self.readFile(d[2], d[3], d[4])
@@ -88,6 +90,16 @@ class Server:
 
     def sendTserver(self):
         return [0, 1, FLT, self.time]
+
+    def findFile(self, filePathName):
+        try:
+            f = open(filePathName, 'r')
+            f.close()
+            return [10, 1, STR, 'File exists on server']
+        except FileNotFoundError:
+            return [10, 1, ERR, "File does not exist on server"]
+        except Exception as e:
+            return [10, 1, ERR, str(e)]
 
     
     def readFile(self, filePathName, offset, numBytes):

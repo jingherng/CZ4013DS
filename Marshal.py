@@ -24,13 +24,14 @@ def pack(msg):
             packed.extend(packString(msg[numObj+i]))
         elif msg[i] == FLT:
             packed.extend(packFloat(msg[numObj+i]))
+        elif msg[i] == ERR:
+            packed.extend(packString(msg[numObj+i]))
     return bytes(packed)
 
 def unpack(msg):
     serviceID = msg[0]
     numObj = msg[1]
     unpacked = [serviceID, numObj]
-
     currentIndex = 2
     for i in range(numObj):
         lenOfCurrentObj = msg[currentIndex + 1] + 1
@@ -44,6 +45,7 @@ def unpack(msg):
         elif msg[currentIndex] == ERR:
             unpacked.append(unpackString(msg[currentIndex+1: currentIndex+lenOfCurrentObj]))
         currentIndex += lenOfCurrentObj
+        
     return unpacked
 
 def packInt(obj):

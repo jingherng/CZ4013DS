@@ -35,6 +35,7 @@ class Server:
     # await data from client
     def await(self):
         while True:
+            print('Monitor List: {}'.format(self.monitorList))
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
             print('Received data from {}:\n{!r}'.format(address, data))

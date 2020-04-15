@@ -59,17 +59,24 @@ class Client:
                 filePathname = input('Input file path name:')
                 findFile = self.findFile(filePathname)
                 if findFile:
-                    monitorInterval = int(input('Input length of monitor interval in seconds:'))
+                    monitorInterval = float(input('Input length of monitor interval in seconds:'))
                     print('Server Reply: {}'.format(self.queryMonitor(filePathname, monitorInterval)))
-                    try:
-                        self.sock.settimeout(monitorInterval)
-                        data, address = self.sock.recvfrom(4096)
-                        update = unpack(data)[-1]
-                        print('Update made to {}: {}'.format(filePathname, update))
-                        self.cache[-1] = update
-                    except socket.timeout:
-                        print('Monitor interval ended after {} seconds'.format(monitorInterval))
-                        self.queryMonitor(filePathname, monitorInterval)
+
+                    timeStart = time.time()
+                    while time.time() < monitorInterval + timeStart:
+                        try:
+                            self.sock.settimeout(monitorInterval)
+                            data, address = self.sock.recvfrom(4096)
+                            update = unpack(data)[-1]
+                            print('Update made to {}: {}'.format(filePathname, update))
+                            self.cache[-1] = update
+
+                            # When receive update, reduce interval timeout of socket
+                            timeNow = time.time()
+                            monitorInterval -= (timeNow - timeStart)
+                        except socket.timeout:
+                            print('Monitoring of file "{}" ended.'.format(filePathname))
+                            self.queryMonitor(filePathname, monitorInterval)
                 else:
                     print('File does not exist on server')
 
@@ -126,7 +133,7 @@ class Client:
         return item
 
     def queryMonitor(self, filePathname, monitorInterval):
-        item = self.send([3, 2, STR, INT, filePathname, monitorInterval])
+        item = self.send([3, 2, STR, FLT, filePathname, monitorInterval])
         return item
 
     def checkCache(self):

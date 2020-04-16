@@ -35,7 +35,7 @@ class Server:
     # await data from client
     def await(self):
         while True:
-            print('Monitor List: {}'.format(self.monitorList))
+            #print('Monitor List: {}'.format(self.monitorList))
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
             print('Received data from {}:\n{!r}'.format(address, data))
@@ -64,7 +64,7 @@ class Server:
             return 'Request not found.'
 
         d = unpack(data)
-        #print("D IS HERE: {}".format(d))
+        print("D IS HERE: {}".format(d))
 
         service = d[0]
         if service == 10:
@@ -109,10 +109,7 @@ class Server:
             f.seek(offset, 0)
             content = f.read(int(numBytes))
             f.close()
-            if content:
-                return [1, 1, STR, content]
-            else:
-                return [1, 1, ERR, "Offset exceeds file length"]
+            return [1, 1, STR, content]
         except FileNotFoundError:
             return [1, 1, ERR, "File does not exist on server"]
         except OSError as e:
@@ -142,9 +139,10 @@ class Server:
     def monitorFile(self, filePathName, monitorInterval, address):
         if (address, filePathName) not in self.monitorList:
             self.monitorList.append((address, filePathName))
+            return [3, 1, STR, '{} added to the monitoring list for {} seconds for file: {}'.format(address, monitorInterval, filePathName)]
         else:
             self.monitorList.remove((address, filePathName))
-        return [3, 1, STR, '{} added to the monitoring list for {} seconds for file: {}'.format(address, monitorInterval, filePathName)]
+            return [3, 1, STR, '{} removed from monitoring list since monitor interval ended'.format(address)]
 
 
 if __name__ == "__main__":

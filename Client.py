@@ -63,7 +63,7 @@ class Client:
                     print('Server Reply: {}'.format(self.queryMonitor(filePathname, monitorInterval)))
 
                     timeStart = time.time()
-                    while time.time() < monitorInterval + timeStart:
+                    while True:
                         try:
                             self.sock.settimeout(monitorInterval)
                             data, address = self.sock.recvfrom(4096)
@@ -77,6 +77,7 @@ class Client:
                         except socket.timeout:
                             print('Monitoring of file "{}" ended.'.format(filePathname))
                             self.queryMonitor(filePathname, monitorInterval)
+                            break
                 else:
                     print('File does not exist on server')
 

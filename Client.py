@@ -18,7 +18,7 @@ class Client:
         self.HOST = 'localhost'
         self.PORT = 7777
         self.freshness_interval = 10
-        self.simulateLoss = True
+        self.simulateLoss = False
 
     def run(self):
         print('Starting client socket...')
@@ -35,8 +35,10 @@ class Client:
             print('Choose service:\n1: Read content of file. Specify file pathname, offset(in bytes) and no. of bytes.\n')
             print('2: Insert content into file. Specify file pathname, offset(in bytes) and sequence of bytes to write into file.\n')
             print('3: Monitor updates of a file.\n')
+            print('4: Calculate length of content in file.\n')
+            print('5: Delete a character in the file.\n')
 
-            userChoice = input('Input 1-3 or "q" to exit:')
+            userChoice = input('Input 1-5 or "q" to exit:')
 
             if userChoice == '1':
                 filePathname = input('Input file path name:')
@@ -81,13 +83,23 @@ class Client:
                                 filePathname))
                             self.queryMonitor(filePathname, monitorInterval)
                             break
+            
+            elif userChoice == '4':
+                filePathname = input('Input file path name:')
+                print('Server Reply: {} characters in {}'.format(self.queryCount(filePathname)[-1], filePathname))
+
+            elif userChoice == '5':
+                filePathname = input('Input file path name:')
+                char = str(input('Input a character found in {}:'.format(filePathname)))
+                content = self.queryDelete(filePathname, char)[-1]
+                print('Server Reply: {} deleted from {}.\n{} contents: {}'.format(char, filePathname, filePathname, content))
 
             elif userChoice == 'q':
                 self.close()
                 break
             else:
                 print(
-                    'You have entered an incorrect service. Please input a number from 1-3.\n')
+                    'You have entered an incorrect service. Please input a number from 1-5.\n')
 
         return
 
@@ -139,6 +151,14 @@ class Client:
 
     def queryMonitor(self, filePathname, monitorInterval):
         item = self.send([3, 2, STR, FLT, filePathname, monitorInterval])
+        return item
+
+    def queryCount(self, filePathname):
+        item = self.send([4, 1, STR, filePathname])
+        return item
+
+    def queryDelete(self, filePathname, char):
+        item = self.send([5, 2, STR, STR, filePathname, char])
         return item
 
     def checkCache(self):

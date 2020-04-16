@@ -16,7 +16,7 @@ class Server:
         self.cacheLimit = 10
         self.monitorList = []  # monitoring list format: [address, filePathname]
         self.invocationSemantics = 'AT_LEAST_ONCE'
-        self.simulateLoss = True
+        self.simulateLoss = False
 
     def run(self):
         try:
@@ -89,6 +89,12 @@ class Server:
         elif service == 3:  # Monitor updates made to content of specified file
             return self.monitorFile(d[2], d[3], address)
 
+        elif service == 4: # Count content in file
+            return self.countFile(d[2])
+
+        elif service == 5:
+            return self.deleteChar(d[2], d[3])
+
         elif service == 0:
             return self.sendTserver()
 
@@ -149,6 +155,30 @@ class Server:
         else:
             self.monitorList.remove((address, filePathName))
             return [3, 1, STR, '{} removed from monitoring list since monitor interval ended'.format(address)]
+
+    def countFile(self, filePathName):
+        try:
+            f = open(filePathName, 'r')
+            count = len(f.read())
+            f.close()
+            return [4, 1, INT, count]
+        except FileNotFoundError:
+            return [4, 1, ERR, "File does not exist on server"]
+
+    def deleteChar(self, filePathName, char):
+        try:
+            f = open(filePathName, 'r')
+            content = f.read()
+            f.close()
+
+            content = content.replace(char, '')
+
+            f = open(filePathName, 'w')
+            f.write(content)
+            f.close()
+            return [5, 1, STR, content]
+        except FileNotFoundError:
+            return [5, 1, ERR, "File does not exist on server"]
 
     def callback(self, content, d):
         if len(self.monitorList) > 0:  # Checks if there are clients registered for monitoring

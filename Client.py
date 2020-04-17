@@ -56,29 +56,32 @@ class Client:
 
             elif userChoice == '3':
                 filePathname = input('Input file path name:')
-                monitorInterval = float(
-                    input('Input length of monitor interval in seconds:'))
-                reply = self.queryMonitor(filePathname, monitorInterval)[-1]
-                print('Server Reply: {}'.format(reply))
-                if reply != 'File does not exist on server':
-                    timeStart = time.time()
-                    while monitorInterval > 0:
-                        try:
-                            self.sock.settimeout(monitorInterval)
-                            data, address = self.sock.recvfrom(4096)
-                            update = unpack(data)[-1]
-                            print('Update made to {}: {}'.format(
-                                filePathname, update))
-                            self.cache[-1] = update
+                monitorInterval = float(input('Input length of monitor interval in seconds:'))
 
-                            # When receive update, reduce interval timeout of socket
-                            timeNow = time.time()
-                            monitorInterval -= (timeNow - timeStart)
-                        except socket.timeout:
-                            self.queryMonitor(filePathname, monitorInterval)
-                            break
-                    print('Monitoring of file "{}" ended.'.format(filePathname))
-                    self.queryMonitor(filePathname, monitorInterval)
+                if monitorInterval < 0.0:
+                    print('Monitor interval input invalid.')
+                else:
+                    reply = self.queryMonitor(filePathname, monitorInterval)[-1]
+                    print('Server Reply: {}'.format(reply))
+                    if reply != 'File does not exist on server':
+                        timeStart = time.time()
+                        while monitorInterval > 0:
+                            try:
+                                self.sock.settimeout(monitorInterval)
+                                data, address = self.sock.recvfrom(4096)
+                                update = unpack(data)[-1]
+                                print('Update made to {}: {}'.format(
+                                    filePathname, update))
+                                self.cache[-1] = update
+
+                                # When receive update, reduce interval timeout of socket
+                                timeNow = time.time()
+                                monitorInterval -= (timeNow - timeStart)
+                            except socket.timeout:
+                                self.queryMonitor(filePathname, monitorInterval)
+                                break
+                        print('Monitoring of file "{}" ended.'.format(filePathname))
+                        self.queryMonitor(filePathname, monitorInterval)
 
             elif userChoice == '4':
                 filePathname = input('Input file path name:')

@@ -7,11 +7,6 @@ import math
 # 2 to (n+1) : typeof(obj)
 # rest : objects
 
-# [1, 3, STR, INT, INT, filePathname, offset, numBytes]
-# [1, 3, STR, INT, INT, 'abc', 1, 1]
-# [2, 3, STR, INT, STR, filePathname, offset, seq]
-# [3, 2, STR, INT, filePathname, monitorInterval]
-
 
 def pack(msg):
     numObj = msg[1]

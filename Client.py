@@ -7,10 +7,6 @@ import optparse
 import time
 import random
 
-# TODO:
-# Service 4,5: idempotent op & non-idempotent op
-# 4: Delete character in file, 5: Count characters in file
-
 
 class Client:
     def __init__(self):
@@ -31,12 +27,12 @@ class Client:
             sys.exit()
 
         while True:
-            print('CACHE: {}'.format(self.cache))
-            print('Choose service:\n1: Read content of file. Specify file pathname, offset(in bytes) and no. of bytes.\n')
+            print('Choose a service according to the following options:\n')
+            print('1: Read content of file. Specify file pathname, offset(in bytes) and no. of bytes.\n')
             print('2: Insert content into file. Specify file pathname, offset(in bytes) and sequence of bytes to write into file.\n')
             print('3: Monitor updates of a file.\n')
             print('4: Calculate length of content in file.\n')
-            print('5: Delete a character in the file.\n')
+            print('5: Create a new file.\n')
 
             userChoice = input('Input 1-5 or "q" to exit:')
 
@@ -66,7 +62,7 @@ class Client:
                 print('Server Reply: {}'.format(reply))
                 if reply != 'File does not exist on server':
                     timeStart = time.time()
-                    while True:
+                    while monitorInterval > 0:
                         try:
                             self.sock.settimeout(monitorInterval)
                             data, address = self.sock.recvfrom(4096)
@@ -79,27 +75,28 @@ class Client:
                             timeNow = time.time()
                             monitorInterval -= (timeNow - timeStart)
                         except socket.timeout:
-                            print('Monitoring of file "{}" ended.'.format(
-                                filePathname))
                             self.queryMonitor(filePathname, monitorInterval)
                             break
-            
+                    print('Monitoring of file "{}" ended.'.format(filePathname))
+                    self.queryMonitor(filePathname, monitorInterval)
+
             elif userChoice == '4':
                 filePathname = input('Input file path name:')
-                print('Server Reply: {} characters in {}'.format(self.queryCount(filePathname)[-1], filePathname))
+                print('Server Reply: {} characters in {}'.format(
+                    self.queryCount(filePathname)[-1], filePathname))
 
             elif userChoice == '5':
-                filePathname = input('Input file path name:')
-                char = str(input('Input a character found in {}:'.format(filePathname)))
-                content = self.queryDelete(filePathname, char)[-1]
-                print('Server Reply: {} deleted from {}.\n{} contents: {}'.format(char, filePathname, filePathname, content))
+                fileName = input('Input file name:')
+                char = str(input('Input file content:'))
+                reply = self.queryCreate(fileName, char)[-1]
+                print('Server Reply: {}'.format(reply))
 
             elif userChoice == 'q':
                 self.close()
                 break
             else:
-                print(
-                    'You have entered an incorrect service. Please input a number from 1-5.\n')
+                print('You have entered an incorrect service.')
+                print('Please input a number from 1-5 or "q" to exit.\n')
 
         return
 
@@ -114,7 +111,6 @@ class Client:
 
                 data, address = self.sock.recvfrom(4096)
                 reply = unpack(data)
-                #print('Reply: {}'.format(reply))
                 if reply[0] == 0:
                     self.cache[1] = reply[-1]
                 return reply
@@ -157,8 +153,8 @@ class Client:
         item = self.send([4, 1, STR, filePathname])
         return item
 
-    def queryDelete(self, filePathname, char):
-        item = self.send([5, 2, STR, STR, filePathname, char])
+    def queryCreate(self, fileName, char):
+        item = self.send([5, 2, STR, STR, fileName, char])
         return item
 
     def checkCache(self):
@@ -172,8 +168,7 @@ class Client:
             print('Does not need access to server, read from cache')
             return False
         elif Tnow - Tvalid >= self.freshness_interval:
-            Tserver = self.send([0, 1, STR, 'Get Tserver']
-                                )[-1]  # obtain Tserver
+            Tserver = self.send([0, 1, STR, 'Get Tserver'])[-1]  # fn to obtain Tserver
             self.cache[0] = Tnow
             if Tclient == Tserver:
                 print('Cache entry valid. Data not modified at server.')

@@ -32,7 +32,7 @@ class Server:
             self.UDP_ip, self.UDP_port))
 
         print('Invocation semantics used: {}'.format(self.invocationSemantics))
-        
+
         try:
             self.sock.bind(serverAddress)
         except socket.error as e:
@@ -49,8 +49,6 @@ class Server:
             print('Awaiting data from client...')
             data, address = self.sock.recvfrom(4096)
             print('Received data from {}:\n{!r}'.format(address, data))
-            # if address not in self.clientList:
-            #    self.clientList.append(address)
             self.replyReq(data, address)
 
     def replyReq(self, data, address):
@@ -73,7 +71,6 @@ class Server:
             return 'Request not found.'
 
         d = unpack(data)  # unpacked data as variable, d
-        #print("D IS HERE: {}".format(d))
 
         service = d[0]
 
@@ -89,11 +86,11 @@ class Server:
         elif service == 3:  # Monitor updates made to content of specified file
             return self.monitorFile(d[2], d[3], address)
 
-        elif service == 4: # Count content in file
+        elif service == 4:  # Count content in file
             return self.countFile(d[2])
 
-        elif service == 5:
-            return self.deleteChar(d[2], d[3])
+        elif service == 5:  # Create a new file
+            return self.createFile(d[2], d[3])
 
         elif service == 0:
             return self.sendTserver()
@@ -165,20 +162,14 @@ class Server:
         except FileNotFoundError:
             return [4, 1, ERR, "File does not exist on server"]
 
-    def deleteChar(self, filePathName, char):
+    def createFile(self, fileName, char):
         try:
-            f = open(filePathName, 'r')
-            content = f.read()
+            f = open(fileName, 'w')
+            f.write(char)
             f.close()
-
-            content = content.replace(char, '')
-
-            f = open(filePathName, 'w')
-            f.write(content)
-            f.close()
-            return [5, 1, STR, content]
-        except FileNotFoundError:
-            return [5, 1, ERR, "File does not exist on server"]
+            return [5, 1, STR, '{} file created in server.'.format(fileName)]
+        except Exception as e:
+            return [5, 1, ERR, str(e)]
 
     def callback(self, content, d):
         if len(self.monitorList) > 0:  # Checks if there are clients registered for monitoring

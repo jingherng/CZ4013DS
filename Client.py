@@ -14,7 +14,7 @@ class Client:
         self.HOST = 'localhost'
         self.PORT = 7777
         self.freshness_interval = 10
-        self.simulateLoss = False
+        self.simulateLoss = True
 
     def run(self):
         print('Starting client socket...')

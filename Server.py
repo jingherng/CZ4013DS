@@ -16,7 +16,7 @@ class Server:
         self.cacheLimit = 10
         self.monitorList = []  # monitoring list format: [address, filePathname]
         self.invocationSemantics = 'AT_LEAST_ONCE'
-        self.simulateLoss = False
+        self.simulateLoss = True
 
     def run(self):
         try:
@@ -231,5 +231,5 @@ if __name__ == "__main__":
     options, args = parser.parse_args()
     server.UDP_ip = str(options.UDP_ip)
     server.UDP_port = int(options.UDP_port)
-    server.invocationSemantics = options.invocationSemantics
+    server.invocationSemantics = str(options.invocationSemantics)
     server.run()
